@@ -1,28 +1,23 @@
-﻿using eCommerce_API.Data;
+﻿using eCommerce_API.Business.Interfaces;
+using eCommerce_API.Data;
 using eCommerce_API.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace eCommerce_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CartController(DataContext context) : ControllerBase
+    public class CartController(DataContext context, ICache cache) : ControllerBase
     {
-
-        private Cart _cart = new();
         private readonly DataContext _context = context;
-
+        private readonly ICache _cache = cache;
 
         // POST: api/Cart
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Cart>> AddToCart(int productID)
+        public async Task<ActionResult<Cart>> AddToCart(int userId, int productID)
         {
-
-            //TODO: update to use the same Cart object instead of creating new one each time (caching?)
-            //Also look into passing product object instead of Id to remove the additional DB call
+            //TODO: look into passing product object instead of Id to remove the additional DB call
             var product = await _context.Products.FindAsync(productID);
 
             if (product == null)
@@ -30,11 +25,27 @@ namespace eCommerce_API.Controllers
                 return NotFound();
             }
 
-            _cart.ShoppingCart.Add(product);
+            var cacheData = _cache.GetData<Cart>(userId.ToString());
 
-            return _cart;
+            //TODO: maybe flip if/else logic?
+            //Cache was null, create new cart for user and cache it
+            if (cacheData == null)
+            {
+                var cart = new Cart();
+                cart.Products.Add(product);
+                var expiryTime = DateTime.Now.AddMinutes(1);
+                _cache.SetData<Cart>(userId.ToString(), cart, expiryTime);
+                return cart;
+            }
+
+            //Data was cached, update it and recache
+            else
+            {
+                var expiryTime = DateTime.Now.AddMinutes(1);
+                cacheData.Products.Add(product);
+                _cache.SetData<Cart>(userId.ToString(), cacheData, expiryTime);
+                return cacheData;
+            }
         }
-
-
     }
 }

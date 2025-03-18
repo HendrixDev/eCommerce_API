@@ -1,3 +1,5 @@
+using eCommerce_API.Business;
+using eCommerce_API.Business.Interfaces;
 using eCommerce_API.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +16,8 @@ builder.Services.AddDbContext<DataContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("eCommerceConnection"));
 });
+
+builder.Services.AddSingleton<ICache, Cache>();
 
 var app = builder.Build();
 
