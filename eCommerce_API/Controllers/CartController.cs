@@ -27,24 +27,23 @@ namespace eCommerce_API.Controllers
 
             var cacheData = _cache.GetData<Cart>(userId.ToString());
 
-            //TODO: maybe flip if/else logic?
-            //Cache was null, create new cart for user and cache it
-            if (cacheData == null)
-            {
-                var cart = new Cart();
-                cart.Products.Add(product);
-                var expiryTime = DateTime.Now.AddMinutes(1);
-                _cache.SetData<Cart>(userId.ToString(), cart, expiryTime);
-                return cart;
-            }
-
             //Data was cached, update it and recache
-            else
+            if (cacheData != null)
             {
-                var expiryTime = DateTime.Now.AddMinutes(1);
+                var expiryTime = DateTime.Now.AddMinutes(10);
                 cacheData.Products.Add(product);
                 _cache.SetData<Cart>(userId.ToString(), cacheData, expiryTime);
                 return cacheData;
+            }
+
+            //Cache was null, create new cart for user and cache it
+            else
+            {
+                var cart = new Cart();
+                cart.Products.Add(product);
+                var expiryTime = DateTime.Now.AddMinutes(10);
+                _cache.SetData<Cart>(userId.ToString(), cart, expiryTime);
+                return cart;
             }
         }
     }
