@@ -8,7 +8,7 @@ namespace eCommerce_API.Models
 {
     public class Cart
     {
-        public List<Product> Products { get; set; } = new List<Product>();
+        public List<Product> Products { get; set; } = [];
         public decimal CartTotal { get; set; }
     }
 }
