@@ -12,7 +12,6 @@ namespace eCommerce_API.Controllers
         private readonly DataContext _context = context;
         private readonly ICache _cache = cache;
 
-
         // Get: api/Cart
         [HttpGet]
         public ActionResult<Cart> GetCart(string sessionId)
@@ -26,7 +25,7 @@ namespace eCommerce_API.Controllers
 
             else
             {
-                cart.CartTotal = cart.Products.Select(x => x.Price).Sum();
+                cart.CartTotal = CalculateCartTotal(cart.Products);
                 return cart;
             }
         }
@@ -44,11 +43,11 @@ namespace eCommerce_API.Controllers
             }
 
             var cacheData = _cache.GetData<Cart>(sessionId);
+            var expiryTime = DateTime.Now.AddMinutes(10);
 
             //Data was cached, update it and recache
             if (cacheData != null)
             {
-                var expiryTime = DateTime.Now.AddMinutes(10);
                 cacheData.Products.Add(product);
                 _cache.SetData<Cart>(sessionId, cacheData, expiryTime);
                 return cacheData;
@@ -59,10 +58,32 @@ namespace eCommerce_API.Controllers
             {
                 var cart = new Cart();
                 cart.Products.Add(product);
-                var expiryTime = DateTime.Now.AddMinutes(10);
                 _cache.SetData<Cart>(sessionId, cart, expiryTime);
                 return cart;
             }
+        }
+
+        // DELETE: api/Products/5
+        [HttpDelete("{id}")]
+        public ActionResult<Cart> RemoveFromCart(string sessionId, int productId)
+        {
+            //get existing cart
+            var cart = _cache.GetData<Cart>(sessionId);
+
+            //remove products with matching IDs
+            cart.Products = cart.Products.Where(x => x.ProductId != productId).ToList();
+            cart.CartTotal = CalculateCartTotal(cart.Products);
+
+            //recache data
+            var expiryTime = DateTime.Now.AddMinutes(10);
+            _cache.SetData<Cart>(sessionId, cart, expiryTime);
+
+            return cart;
+        }
+
+        private static decimal CalculateCartTotal(List<Product> products)
+        {
+            return products.Select(x => x.Price).Sum();
         }
     }
 }
