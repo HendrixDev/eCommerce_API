@@ -32,7 +32,7 @@ namespace eCommerce_API.Controllers
 
         // POST: api/Cart
         [HttpPost]
-        public async Task<ActionResult<Cart>> AddToCart(string sessionId, int productID)
+        public async Task<ActionResult<Cart>> AddToCart(string sessionId, int productID, int quantity)
         {
             //TODO: look into passing product object instead of Id to remove the additional DB call
             var product = await _context.Products.FindAsync(productID);
@@ -48,7 +48,10 @@ namespace eCommerce_API.Controllers
             //Data was cached, update it and recache
             if (cacheData != null)
             {
-                cacheData.Products.Add(product);
+                for (int i = 0; i < quantity; i++)
+                {
+                    cacheData.Products.Add(product);
+                }
                 _cache.SetData<Cart>(sessionId, cacheData, expiryTime);
                 return cacheData;
             }
@@ -57,7 +60,11 @@ namespace eCommerce_API.Controllers
             else
             {
                 var cart = new Cart();
-                cart.Products.Add(product);
+
+                for (int i = 0; i < quantity; i++)
+                {
+                    cart.Products.Add(product);
+                }
                 _cache.SetData<Cart>(sessionId, cart, expiryTime);
                 return cart;
             }
