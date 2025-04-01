@@ -25,7 +25,7 @@ namespace eCommerce_API.Controllers
 
             else
             {
-                cart.CartTotal = CalculateCartTotal(cart.Products);
+                cart.CartTotal = cart.CalculateTotal();
                 return cart;
             }
         }
@@ -67,7 +67,7 @@ namespace eCommerce_API.Controllers
             var cart = _cache.GetData<Cart>(sessionId);
 
             //remove products with matching IDs
-            cart.Products = cart.Products.Where(x => x.ProductId != productId).ToList();
+            cart.Products = [.. cart.Products.Where(x => x.ProductId != productId)];
 
             if (cart.Products.Count == 0)
             {   //remove cart from cache if no products are left
@@ -77,16 +77,11 @@ namespace eCommerce_API.Controllers
 
             else
             {   //recache data
-                cart.CartTotal = CalculateCartTotal(cart.Products);
+                cart.CartTotal = cart.CalculateTotal();
                 var expiryTime = DateTime.Now.AddMinutes(10);
                 _cache.SetData<Cart>(sessionId, cart, expiryTime);
                 return cart;
             }
-        }
-
-        private static decimal CalculateCartTotal(List<Product> products)
-        {
-            return products.Select(x => x.Price).Sum();
         }
     }
 }
