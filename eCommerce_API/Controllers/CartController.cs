@@ -43,35 +43,24 @@ namespace eCommerce_API.Controllers
             }
 
             var cacheData = _cache.GetData<Cart>(sessionId);
-            var expiryTime = DateTime.Now.AddMinutes(10);
+            Cart cart;
 
-            //Data was cached, update it and recache
-            if (cacheData != null)
-            {
-                for (int i = 0; i < quantity; i++)
-                {
-                    cacheData.Products.Add(product);
-                }
-                _cache.SetData<Cart>(sessionId, cacheData, expiryTime);
-                return cacheData;
-            }
-
-            //Cache was null, create new cart for user and cache it
+            if (cacheData != null)//Data was cached, use it
+                cart = cacheData;
             else
-            {
-                var cart = new Cart();
+                cart = new Cart();//No data in cache, create new cart
 
-                for (int i = 0; i < quantity; i++)
-                {
-                    cart.Products.Add(product);
-                }
-                _cache.SetData<Cart>(sessionId, cart, expiryTime);
-                return cart;
+            for (int i = 0; i < quantity; i++)
+            {
+                cart.Products.Add(product);
             }
+
+            var expiryTime = DateTime.Now.AddMinutes(10);
+            _cache.SetData<Cart>(sessionId, cart, expiryTime);
+            return cart;
         }
 
-        // DELETE: api/Products/5
-        [HttpDelete("{id}")]
+        [HttpDelete]
         public ActionResult<Cart> RemoveFromCart(string sessionId, int productId)
         {
             //get existing cart
@@ -79,13 +68,20 @@ namespace eCommerce_API.Controllers
 
             //remove products with matching IDs
             cart.Products = cart.Products.Where(x => x.ProductId != productId).ToList();
-            cart.CartTotal = CalculateCartTotal(cart.Products);
 
-            //recache data
-            var expiryTime = DateTime.Now.AddMinutes(10);
-            _cache.SetData<Cart>(sessionId, cart, expiryTime);
+            if (cart.Products.Count == 0)
+            {   //remove cart from cache if no products are left
+                _cache.RemoveData(sessionId);
+                return new Cart();
+            }
 
-            return cart;
+            else
+            {   //recache data
+                cart.CartTotal = CalculateCartTotal(cart.Products);
+                var expiryTime = DateTime.Now.AddMinutes(10);
+                _cache.SetData<Cart>(sessionId, cart, expiryTime);
+                return cart;
+            }
         }
 
         private static decimal CalculateCartTotal(List<Product> products)
