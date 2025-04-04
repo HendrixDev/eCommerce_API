@@ -5,12 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace eCommerce_API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class CartController(DataContext context, ICache cache) : ControllerBase
     {
         private readonly DataContext _context = context;
         private readonly ICache _cache = cache;
+        private readonly DateTime _expiryTime = DateTime.Now.AddMinutes(10);
 
         // Get: api/Cart
         [HttpGet]
@@ -42,23 +43,36 @@ namespace eCommerce_API.Controllers
                 return NotFound();
             }
 
-            var cacheData = _cache.GetData<Cart>(sessionId);
-            Cart cart;
+            var cachedCart = _cache.GetData<Cart>(sessionId);
 
-            if (cacheData != null)//Data was cached, use it
-                cart = cacheData;
-            else
-                cart = new Cart();//No data in cache, create new cart
+            //if cachedCart is null, create a new one
+            Cart cart = cachedCart ?? new Cart();
 
             for (int i = 0; i < quantity; i++)
             {
                 cart.Products.Add(product);
             }
-
-            var expiryTime = DateTime.Now.AddMinutes(10);
-            _cache.SetData<Cart>(sessionId, cart, expiryTime);
+            cart.CartTotal = cart.CalculateTotal();
+            _cache.SetData<Cart>(sessionId, cart, _expiryTime);
             return cart;
         }
+
+        [HttpPost]
+        public ActionResult<Cart> IncreaseQuantity(string sessionId, int productID)
+        {
+            var cart = _cache.GetData<Cart>(sessionId);
+
+            //get matching product from cart
+            var productToAdd = cart.Products.First(x => x.ProductId == productID);
+
+            //add the same product to the cart
+            cart.Products.Add(productToAdd);
+
+            cart.CartTotal = cart.CalculateTotal();
+            _cache.SetData<Cart>(sessionId, cart, _expiryTime);
+            return cart;
+        }
+
 
         [HttpDelete]
         public ActionResult<Cart> RemoveFromCart(string sessionId, int productId)
@@ -78,8 +92,7 @@ namespace eCommerce_API.Controllers
             else
             {   //recache data
                 cart.CartTotal = cart.CalculateTotal();
-                var expiryTime = DateTime.Now.AddMinutes(10);
-                _cache.SetData<Cart>(sessionId, cart, expiryTime);
+                _cache.SetData<Cart>(sessionId, cart, _expiryTime);
                 return cart;
             }
         }
