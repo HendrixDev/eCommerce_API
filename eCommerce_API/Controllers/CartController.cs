@@ -26,7 +26,6 @@ namespace eCommerce_API.Controllers
 
             else
             {
-                cart.CartTotal = cart.CalculateTotal();
                 return cart;
             }
         }
@@ -52,7 +51,6 @@ namespace eCommerce_API.Controllers
             {
                 cart.Products.Add(product);
             }
-            cart.CartTotal = cart.CalculateTotal();
             _cache.SetData<Cart>(sessionId, cart, _expiryTime);
             return cart;
         }
@@ -65,10 +63,8 @@ namespace eCommerce_API.Controllers
             //get matching product from cart
             var productToAdd = cart.Products.First(x => x.ProductId == productID);
 
-            //add the same product to the cart
             cart.Products.Add(productToAdd);
 
-            cart.CartTotal = cart.CalculateTotal();
             _cache.SetData<Cart>(sessionId, cart, _expiryTime);
             return cart;
         }
@@ -91,7 +87,6 @@ namespace eCommerce_API.Controllers
 
             else
             {   //recache data
-                cart.CartTotal = cart.CalculateTotal();
                 _cache.SetData<Cart>(sessionId, cart, _expiryTime);
                 return cart;
             }
